@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JLN Stadium 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a national venue's own ticketing app: civic, precise, honest about what is provisional.
+   IDEA: the stadium is the seat map; the PTFE lotus roof is the hero; drill stadium → stand → block → seat.
+   PICTURE: full-bleed three.js twin of JLN, Delhi daylight haze, folded white membrane over a blue bowl.
+   COLOUR and TYPE: seat blue, sold grey, reserved yellow, VIP gold, selection orange; Archivo + Inter.
+   LAYOUT: header top-left, info panel right (bottom sheet on phones), camera bar bottom-left, ticket as a modal. */
+:root{color-scheme:light dark;--card:light-dark(rgba(251,250,247,.95),rgba(22,23,27,.93));--ink:light-dark(#121316,#f1efe9);--mute:light-dark(#62605a,#a3a098);--line:light-dark(#e1ddd3,#34353b);--or:#ff6a13;--chip:light-dark(#f1eee7,#26272c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:#dcd6c8;color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;overflow:hidden}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+h1,h2,h3,b{font-family:Archivo,Inter,sans-serif}
+.card{background:var(--card);backdrop-filter:blur(12px);border-radius:16px;box-shadow:0 10px 36px rgba(30,25,10,.18)}
+.hd{position:fixed;top:14px;left:14px;max-width:min(520px,calc(100vw - 404px));padding:14px 18px;z-index:3}
+.hd h1{margin:0;font-size:26px;line-height:1.08;font-weight:800}
+.hd p{margin:3px 0 8px;color:var(--mute);font-size:13px}
+.prov{display:inline-block;font-size:12px;font-weight:600;color:#8a5a00;background:#fff1c9;border-radius:6px;padding:2px 8px}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:8px;font-size:13px}
+.crumbs button{border:0;background:var(--chip);color:var(--ink);font:inherit;border-radius:8px;padding:5px 10px;min-height:32px;cursor:pointer}
+.crumbs button[aria-current]{background:var(--or);color:#fff}
+.crumbs i{color:var(--mute);font-style:normal}
+.side{position:fixed;top:14px;right:14px;bottom:14px;width:370px;display:flex;flex-direction:column;z-index:3;overflow:hidden}
+.ev{padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px;color:var(--mute)}.ev b{color:var(--ink);font-size:14px}
+.pbody{padding:16px 18px;overflow:auto;flex:1}
+.kick{font-size:12px;color:var(--mute);font-weight:600}
+.pbody h2{margin:2px 0 8px;font-size:22px;line-height:1.15}
+.pbody p{margin:6px 0;color:var(--mute);font-size:13.5px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0;font-size:13.5px}
+dt{color:var(--mute)}dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+code{font-size:12px;overflow-wrap:anywhere}
+.st{display:inline-block;font-size:12px;font-weight:600;border-radius:99px;padding:3px 10px;color:#fff}
+.st0{background:#2b5fb4}.st1{background:#868a91}.st2{background:#c99a10}.st3{background:#c99a10}.stv{background:#a8841a}.stm{background:#2f8f4a}
+.rows{display:grid;gap:6px;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:48px}
+.row:hover{border-color:var(--or)}.row small{color:var(--mute);display:block;font-size:12px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{min-height:44px;border:0;border-radius:99px;font:600 14px Inter,sans-serif;cursor:pointer;padding:0 18px;background:var(--chip);color:var(--ink)}
+.btn.pri{background:var(--or);color:#fff}.btn.gold{background:#c9a227;color:#1b1608}
+.btn:focus-visible,.cams button:focus-visible,.row:focus-visible,.crumbs button:focus-visible{outline:3px solid #2f6bff;outline-offset:2px}
+.timer{font:800 26px Archivo,sans-serif;color:#2f8f4a;font-variant-numeric:tabular-nums}
+.leg{padding:10px 18px 14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mute)}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tools{position:fixed;left:14px;bottom:14px;right:398px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;z-index:3;pointer-events:none}
+.cams{display:flex;flex-wrap:wrap;gap:4px;padding:6px;pointer-events:auto}
+.cams button,.roofb{border:0;background:none;color:var(--ink);font:500 13px Inter,sans-serif;border-radius:10px;padding:0 12px;min-height:40px;cursor:pointer;white-space:nowrap}
+.cams button:hover{background:var(--chip)}.cams button[aria-pressed=true]{background:var(--ink);color:var(--card)}
+.cams button:disabled{opacity:.35;cursor:not-allowed}
+.roofb{pointer-events:auto;background:var(--card);box-shadow:0 6px 20px rgba(0,0,0,.15);min-height:52px;padding:0 16px}
+.tip{position:fixed;left:0;top:0;background:var(--card);border-radius:10px;padding:7px 11px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:none;opacity:0;transition:opacity .1s;z-index:4;font-size:13px;white-space:nowrap}
+.tip.on{opacity:1}.tip b{font-size:14px}.tip span{color:var(--mute)}
+.look{position:fixed;top:18px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;text-shadow:0 1px 6px rgba(0,0,0,.7);opacity:0;transition:opacity .4s;z-index:2;white-space:nowrap}
+body[data-state=view] .look{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(10,10,12,.55);display:none;place-items:center;z-index:8;padding:16px}
+.modal.on{display:grid}
+.tkt{width:min(760px,100%);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);background:#faf8f3;color:#141414;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45);max-height:calc(100vh - 32px);overflow-y:auto}
+.tkt .vw{position:relative;background:#222;min-height:220px}.tkt canvas{display:block;width:100%;height:100%;object-fit:cover}
+.tkt .vw span{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;border-radius:99px;padding:3px 10px}
+.tkt .in{padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.tkt small{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#7c786f}
+.tkt h3{margin:0;font-size:24px;line-height:1.1}
+.cells{display:flex;gap:18px}.cells b{display:block;font-size:26px;line-height:1}
+.qrw{display:flex;gap:14px;align-items:center}.qr svg{width:116px;height:116px;display:block}
+.tkt .pr{font:800 24px Archivo,sans-serif;color:var(--or)}
+.toast{position:fixed;top:16px;left:50%;transform:translate(-50%,-90px);background:#141414;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;transition:transform .35s;z-index:9;max-width:calc(100vw - 32px)}
+.toast.on{transform:translate(-50%,0)}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#dcd6c8;color:#4d4436;font:600 18px Archivo,sans-serif;z-index:10;transition:opacity .6s;text-align:center;padding:20px}
+#load.off{opacity:0;pointer-events:none}
+@media(max-width:820px){
+ .hd{max-width:calc(100vw - 28px);right:14px;padding:10px 14px}.hd h1{font-size:19px}.hd p{display:none}
+ .side{top:auto;left:8px;right:8px;bottom:8px;width:auto;max-height:44vh}
+ .ev{display:none}.leg{display:none}.pbody{padding:12px 14px}.pbody h2{font-size:18px}
+ .side{height:40vh}.tools{left:8px;right:8px;bottom:calc(40vh + 16px);flex-wrap:nowrap}.cams{flex-wrap:nowrap;overflow-x:auto;flex:1}.cams button{flex:none}
+ .roofb{min-height:44px;padding:0 10px}
+ .tkt{grid-template-columns:minmax(0,1fr)}.tkt .vw{min-height:160px}
+}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body data-state="intro">
+<canvas id="c"></canvas>
+<div id="load">Building Jawaharlal Nehru Stadium…</div>
+<header class="hd card">
+ <h1>Jawaharlal Nehru Stadium</h1>
+ <p>Lodhi Road, New Delhi · official capacity 60,254 · this model has <b id="cnt">–</b> seats</p>
+ <span class="prov">Unofficial digital twin · layout, names and prices are provisional</span>
+ <nav class="crumbs" id="crumbs" aria-label="Selection"></nav>
+</header>
+<aside class="side card" aria-live="polite">
+ <div class="ev">Demo event · <b>Delhi Athletics Night</b><br>Sat 13 Dec 2026 · 6:30 PM · ticketing is simulated</div>
+ <div class="pbody" id="panel"></div>
+ <div class="leg"><span><i style="background:#2b5fb4"></i>Available</span><span><i style="background:#ff8a1f"></i>Hover</span><span><i style="background:#ff5a00;outline:2px solid #ff5a00;outline-offset:1px"></i>Selected</span><span><i style="background:#9ea2a9"></i>Sold</span><span><i style="background:#f2c230"></i>Reserved / held</span><span><i style="background:#c9a227"></i>VIP</span></div>
+</aside>
+<div class="tools">
+ <div class="cams card" id="cams" role="toolbar" aria-label="Camera views">
+  <button data-cam="aerial">Aerial</button><button data-cam="drone">Drone 45°</button><button data-cam="interior">Interior</button><button data-cam="pitch">Pitch level</button><button data-cam="track">Track level</button><button data-cam="seat" disabled>My seat</button><button data-cam="vip">VIP</button>
+ </div>
+ <button class="roofb" id="roofBtn">Roof: solid</button>
+</div>
+<div class="tip" id="tip"></div>
+<div class="look">Drag to look around · scroll to zoom · Esc to go back</div>
+<div class="modal" id="modal"><div class="tkt" role="dialog" aria-label="Your ticket">
+ <div class="vw"><canvas id="snap" width="800" height="560"></canvas><span>View from your seat</span></div>
+ <div class="in" id="tktIn"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+/* ---------- configurable data (all provisional) ---------- */
+const CFG={
+ stands:{A:'Stand A',B:'Stand B',C:'Stand C',D:'Stand D'},
+ tiers:[{key:'L',name:'Lower tier',rows:30,d0:1.5,dep:.8,h0:1.2,rise:.36},{key:'U',name:'Upper tier',rows:27,d0:28.5,dep:.85,h0:18,rise:.6}],
+ blocksPer:{side:10,end:14},seatPitch:.55,
+ price:{A:{L:1500,U:800},C:{L:1800,U:900},B:{L:900,U:500},D:{L:900,U:500}},
+ vip:{stand:'C',tier:'L',blocks:[5,6],fromRow:20,price:6000,perks:'Lounge access, padded seat, refreshments'},
+ gates:14,holdSeconds:600,
+ event:{name:'Delhi Athletics Night',when:'Sat 13 Dec 2026 · 6:30 PM'}
+};
+function main(){
+const C=h=>new THREE.Color(h).convertSRGBToLinear(),V=(x,y,z)=>new THREE.Vector3(x,y,z),Y=V(0,1,0);
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t,ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const fmt=n=>Math.round(n).toLocaleString('en-IN'),inr=n=>'₹'+fmt(n),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let seed=2010;const rnd=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+
+const canvas=$('#c'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene(),pickScene=new THREE.Scene();pickScene.background=new THREE.Color(0);
+scene.fog=new THREE.Fog(C(0xdcd6c8),650,2800);
+const camera=new THREE.PerspectiveCamera(45,1,.5,7000);
+
+/* Delhi daylight: high warm sun, hazy sky */
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(5000,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,
+ vertexShader:'varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+ fragmentShader:'varying vec3 v;void main(){float h=clamp(v.y,0.,1.);vec3 c=mix(vec3(.86,.84,.79),vec3(.47,.63,.82),pow(h,.6));c+=vec3(1.,.9,.7)*pow(max(dot(normalize(v),normalize(vec3(.72,.5,.43))),0.),40.)*.6;gl_FragColor=vec4(c,1.);}'})));
+scene.add(new THREE.HemisphereLight(C(0xdbe6f2),C(0x8a7a5a),.85));
+const sun=new THREE.DirectionalLight(C(0xfff0d8),2.5);sun.position.set(250,175,150);sun.castShadow=true;
+Object.assign(sun.shadow.camera,{left:-185,right:185,top:185,bottom:-185,near:60,far:700});
+sun.shadow.mapSize.set(4096,4096);sun.shadow.bias=-.0005;sun.shadow.normalBias=.35;scene.add(sun);
+
+/* racetrack geometry: two straights (half length L) + two semicircles, radius r from the centre line */
+const L=42.195,R0=50,STANDS=['A','B','C','D'];
+function pt(s,u,r){if(s===0)return[-L+2*L*u,-r,0,-1];if(s===2)return[L-2*L*u,r,0,1];
+ const cx=s===1?L:-L,a=(s===1?-90+180*u:90+180*u)*Math.PI/180,nx=Math.cos(a),nz=Math.sin(a);return[cx+r*nx,r*nz,nx,nz]}
+const segLen=(s,r)=>s%2?Math.PI*r:2*L;
+const SAMP=[];for(let s=0;s<4;s++){const n=s%2?48:1;for(let i=0;i<n;i++)SAMP.push([s,i/n])}SAMP.push([0,0]);
+function band(a,r1,h1,r2,h2){for(let i=0;i<SAMP.length-1;i++){const[s0,u0]=SAMP[i],[s1,u1]=SAMP[i+1],A=pt(s0,u0,r1),B=pt(s1,u1,r1),P=pt(s0,u0,r2),Q=pt(s1,u1,r2);
+ a.push(A[0],h1,A[1],B[0],h1,B[1],P[0],h2,P[1],B[0],h1,B[1],Q[0],h2,Q[1],P[0],h2,P[1])}}
+function tube(a,r,h,w,t){band(a,r-w,h,r+w,h);band(a,r-w,h-t,r+w,h-t);band(a,r-w,h-t,r-w,h);band(a,r+w,h-t,r+w,h)}
+function around(r,step){const P=[];for(let s=0;s<4;s++){const n=Math.max(1,Math.round(segLen(s,r)/step));for(let j=0;j<n;j++)P.push([s,j/n])}return P}
+function geo(a){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));g.computeVertexNormals();return g}
+const black=new THREE.MeshBasicMaterial({color:0,side:THREE.DoubleSide});
+function add(g,m,o={}){const me=new THREE.Mesh(g,m);me.castShadow=o.cast!==false;me.receiveShadow=true;scene.add(me);if(o.pick){me.userData.pk=new THREE.Mesh(g,black);pickScene.add(me.userData.pk)}return me}
+const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:C(c),roughness:.85,side:THREE.DoubleSide},o));
+const box=(w,h,d,x,y,z)=>{const g=new THREE.BoxGeometry(w,h,d);g.translate(x,y,z);return g};
+function merge(gs){const p=[],n=[];gs.forEach(g=>{g=g.toNonIndexed();p.push(...g.attributes.position.array);n.push(...g.attributes.normal.array)});const m=new THREE.BufferGeometry();m.setAttribute('position',new THREE.Float32BufferAttribute(p,3));m.setAttribute('normal',new THREE.Float32BufferAttribute(n,3));return m}
+function cvTex(w,h,draw){const cv=document.createElement('canvas');cv.width=w;cv.height=h;draw(cv.getContext('2d'));const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t}
+function inst(g,mat,list,setter,o={}){const m=new THREE.InstancedMesh(g,mat,list.length),ob=new THREE.Object3D();list.forEach((it,i)=>{ob.position.set(0,0,0);ob.rotation.set(0,0,0);ob.scale.set(1,1,1);ob.quaternion.identity();setter(ob,it,i);ob.updateMatrix();m.setMatrixAt(i,ob.matrix)});m.frustumCulled=false;m.castShadow=o.cast!==false;m.receiveShadow=true;scene.add(m);return m}
+
+/* field of play: infield grass, 9-lane track, pitch */
+{const sh=new THREE.Shape(SAMP.map(([s,u])=>{const p=pt(s,u,36.5);return new THREE.Vector2(p[0],-p[1])}));const g=new THREE.ShapeGeometry(sh,1);g.rotateX(-Math.PI/2);
+ const m=new THREE.Mesh(g,M(0x3f7f35,{roughness:1}));m.position.y=.05;m.receiveShadow=true;scene.add(m)}
+const trk=[],lines=[];band(trk,36.5,.04,51,.04);for(let k=0;k<=9;k++)band(lines,36.5+k*1.22-.03,.08,36.5+k*1.22+.03,.08);
+add(geo(trk),M(0x9a3b2a,{roughness:.95}),{cast:false});add(geo(lines),M(0xf4f2ec,{roughness:.6}),{cast:false});
+const pitchT=cvTex(1050,680,g=>{for(let i=0;i<14;i++){g.fillStyle=i%2?'#3e8a36':'#47973f';g.fillRect(i*75,0,75,680)}
+ g.strokeStyle='rgba(255,255,255,.93)';g.lineWidth=4;const R=(x,y,w,h)=>g.strokeRect(x*10,y*10,w*10,h*10);
+ R(.2,.2,104.6,67.6);g.beginPath();g.moveTo(525,2);g.lineTo(525,678);g.stroke();g.beginPath();g.arc(525,340,91.5,0,7);g.stroke();
+ R(.2,13.85,16.5,40.3);R(88.3,13.85,16.5,40.3);R(.2,24.84,5.5,18.32);R(99.3,24.84,5.5,18.32);
+ g.beginPath();g.arc(110,340,91.5,-.927,.927);g.stroke();g.beginPath();g.arc(940,340,91.5,Math.PI-.927,Math.PI+.927);g.stroke();
+ g.fillStyle='#fff';[110,525,940].forEach(x=>{g.beginPath();g.arc(x,340,5,0,7);g.fill()})});
+{const p=new THREE.Mesh(new THREE.PlaneGeometry(105,68),new THREE.MeshStandardMaterial({map:pitchT,roughness:.95}));p.rotation.x=-Math.PI/2;p.position.y=.1;p.receiveShadow=true;scene.add(p);
+ const gm=M(0xffffff,{roughness:.4});[-52.5,52.5].forEach(x=>[[.12,2.44,.12,1.22,-3.66],[.12,2.44,.12,1.22,3.66],[.12,.12,7.44,2.44,0]].forEach(a=>{const m=new THREE.Mesh(new THREE.BoxGeometry(a[0],a[1],a[2]),gm);m.position.set(x,a[3],a[4]);m.castShadow=true;scene.add(m)}))}
+
+/* seating bowl (provisional tiers) */
+const con=[],glass=[],warm=[],fas=[],steel=[],slab=[];
+band(con,R0+1,0,R0+1,1.5);
+const TI=CFG.tiers;TI.forEach((T,ti)=>{for(let r=0;r<T.rows;r++){const rr=R0+T.d0+r*T.dep,h=T.h0+r*T.rise;band(con,rr,h,rr+T.dep,h);band(con,rr+T.dep,h,rr+T.dep,h+T.rise)}
+ T.rE=R0+T.d0+T.rows*T.dep;T.hE=T.h0+T.rows*T.rise;band(con,T.rE,T.hE,T.rE,T.hE+1.1);
+ if(ti){band(fas,R0+T.d0-.02,T.h0-1.5,R0+T.d0-.02,T.h0+.95);band(con,R0+T.d0,T.h0-1.5,T.rE,T.hE-1.6)}});
+const H0=TI[0].hE+1.1;band(con,TI[0].rE,H0,R0+29,H0);band(glass,TI[0].rE+.5,H0,TI[0].rE+.5,16.5);band(con,TI[0].rE,16.5,R0+28.6,16.5);band(warm,R0+28.6,H0,R0+28.6,16.5);
+const RB=TI[1].rE+1.6;band(con,RB,0,RB,TI[1].hE+1.7);band(con,TI[1].rE,TI[1].hE+1.1,RB,TI[1].hE+1.7);
+/* two basket-like colonnades carrying compression rings, with concourse/ramp levels between (provisional) */
+const RCI=110,HCI=40,RCO=121,HCO=45;
+[9,18,27].forEach(h=>band(slab,RB,h,RCO-1,h));
+tube(steel,RCI,HCI,.9,1.2);tube(steel,RCO,HCO,1.1,1.5);
+const colG=new THREE.CylinderGeometry(.32,.32,1,6);colG.translate(0,.5,0);
+const cols=[];[[RCI,HCI,7.5],[RCO,HCO,8.5]].forEach(([r,h,st])=>{const P=around(r,st);P.forEach((a,i)=>{const b=P[(i+1)%P.length],pa=pt(a[0],a[1],r),pb=pt(b[0],b[1],r);cols.push([V(pa[0],0,pa[1]),V(pb[0],h-1,pb[1])],[V(pb[0],0,pb[1]),V(pa[0],h-1,pa[1])])})});
+const steelM=M(0x9aa0a7,{metalness:.65,roughness:.38});
+inst(colG,steelM,cols,(o,[a,b])=>{const d=b.clone().sub(a);o.position.copy(a);o.quaternion.setFromUnitVectors(Y,d.clone().normalize());o.scale.set(1,d.length(),1)});
+
+/* PTFE membrane roof: alternating ridge / valley radial cables between an inner tension ring and the outer compression ring */
+const RIN=48,HIN=39,AMP=5.2,J=14,NODES=[];for(let s=0;s<4;s++){const n=s%2?40:16;for(let i=0;i<n;i++)NODES.push([s,i/n])}NODES.push([0,0]);
+const mem=[],cab=[],RP=(n,sg,t)=>{const p=pt(n[0],n[1],lerp(RIN,RCO,t));return[p[0],lerp(HIN,HCO,t)+sg*AMP*Math.sin(Math.PI*t),p[1]]};
+for(let k=0;k<NODES.length-1;k++){const a=NODES[k],b=NODES[k+1],sa=k%2?-1:1,sb=-sa;
+ for(let j=0;j<J;j++){const t0=j/J,t1=(j+1)/J,A=RP(a,sa,t0),B=RP(b,sb,t0),P=RP(a,sa,t1),Q=RP(b,sb,t1);mem.push(...A,...B,...P,...B,...Q,...P);cab.push(...A,...P)}}
+const memM=M(0xfbfaf6,{roughness:.55,transparent:true,opacity:.96,emissive:C(0x6e6a60),emissiveIntensity:.12});
+const roof=add(geo(mem),memM,{pick:1});
+const cables=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(cab,3)),new THREE.LineBasicMaterial({color:C(0x6f747b)}));scene.add(cables);
+tube(steel,RIN,HIN,.8,1);band(steel,RIN+.8,HIN-1.9,RIN+2.6,HIN-1.9);
+add(geo(con),M(0xd3cdc1),{pick:1});add(geo(slab),M(0xc9c3b6),{pick:1});add(geo(fas),M(0x1e2a44,{roughness:.4}),{pick:1});add(geo(steel),steelM,{pick:1});
+add(geo(warm),M(0xe1b98a,{emissive:C(0x8a5a28),emissiveIntensity:.7}));
+add(geo(glass),M(0x1d2a36,{metalness:.6,roughness:.08,transparent:true,opacity:.45}),{cast:false});
+/* catwalk floodlights under the inner ring */
+const FL=around(RIN+1.8,3.2);
+inst(box(.9,.5,.6,0,0,0),new THREE.MeshStandardMaterial({color:C(0xeeeeee),emissive:C(0xfff6e0),emissiveIntensity:.9}),FL,(o,[s,u])=>{const p=pt(s,u,RIN+1.8);o.position.set(p[0],HIN-2.4,p[1]);o.rotation.set(0,Math.atan2(p[2],p[3]),0);o.rotateX(.6)},{cast:false});
+/* scoreboards at both ends (positions provisional) */
+const scrT=cvTex(960,260,g=>{g.fillStyle='#0b0d12';g.fillRect(0,0,960,260);g.fillStyle='#fff';g.font='800 84px Archivo,Arial,sans-serif';g.textAlign='center';g.fillText('JLN STADIUM',480,120);g.fillStyle='#ff8a1f';g.font='600 44px Inter,Arial,sans-serif';g.fillText('Demo · provisional model',480,196)});
+[1,3].forEach(s=>{const p=pt(s,.5,96),yaw=Math.atan2(-p[2],-p[3]);const sc=new THREE.Mesh(new THREE.PlaneGeometry(24,6.5),new THREE.MeshBasicMaterial({map:scrT,toneMapped:false}));sc.position.set(p[0]-p[2]*.35,36.5,p[1]-p[3]*.35);sc.rotation.y=yaw;scene.add(sc);
+ const bk=new THREE.Mesh(new THREE.BoxGeometry(24.8,7.2,.6),M(0x1a1c22));bk.position.set(p[0],36.5,p[1]);bk.rotation.y=yaw;bk.castShadow=true;scene.add(bk)});
+
+/* surroundings (schematic) */
+const gT=cvTex(256,256,g=>{g.fillStyle='#86985a';g.fillRect(0,0,256,256);for(let i=0;i<900;i++){g.fillStyle=rnd()<.5?'rgba(70,80,30,.25)':'rgba(210,190,130,.18)';const s=2+rnd()*10;g.fillRect(rnd()*256,rnd()*256,s,s)}});gT.wrapS=gT.wrapT=THREE.RepeatWrapping;gT.repeat.set(110,110);
+{const gr=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),new THREE.MeshStandardMaterial({map:gT,roughness:1}));gr.rotation.x=-Math.PI/2;gr.position.y=-.45;gr.receiveShadow=true;scene.add(gr)}
+const plaza=[],road=[];band(plaza,RB,.04,142,.04);band(road,152,.05,162,.05);
+add(geo(plaza),M(0xd6c8ad),{cast:false});add(geo(road),M(0x45484e,{roughness:.7}),{cast:false});
+const TP=[];for(let k=0;k<6000&&TP.length<1300;k++){const x=(rnd()-.5)*1300,z=(rnd()-.5)*1300,r=Math.hypot(Math.max(Math.abs(x)-L,0),z);if(r<172||(r>146&&r<168))continue;if(Math.sin(x*.019)+Math.cos(z*.015+1)+rnd()*1.4<.45)continue;TP.push([x,z,.7+rnd()*.8])}
+{const tg=new THREE.CylinderGeometry(.35,.5,3,5);tg.translate(0,1.5,0);const cg=new THREE.IcosahedronGeometry(3.6,0);cg.translate(0,5.8,0);
+ const set=(o,t)=>{o.position.set(t[0],0,t[1]);o.rotation.y=t[0]*13%6;o.scale.setScalar(t[2])};inst(tg,M(0x6b4a2e),TP,set);
+ const cr=inst(cg,new THREE.MeshStandardMaterial({roughness:.9,flatShading:true}),TP,set);const TC=['#4a6a2c','#5a7a33','#3d5e28','#66813a'].map(C);TP.forEach((t,i)=>cr.setColorAt(i,TC[i%4]))}
+
+/* ---------- seats: every seat has id, stand, tier, block, row, number, coordinates ---------- */
+const sx=[],sy=[],sz=[],sya=[],sbk=[],srow=[],snum=[],blocks=[],stands={};
+STANDS.forEach((k,s)=>{const S={key:k,name:CFG.stands[k],s,start:sx.length,blocks:[]};
+ TI.forEach((T,ti)=>{const nb=s%2?CFG.blocksPer.end:CFG.blocksPer.side;
+  for(let b=0;b<nb;b++){const B={id:`${k}${T.key}-${String(b+1).padStart(2,'0')}`,stand:k,tier:ti,n:b+1,start:sx.length,rows:T.rows,price:CFG.price[k][T.key]};
+   for(let r=0;r<T.rows;r++){const rr=R0+T.d0+r*T.dep+T.dep*.42,h=T.h0+r*T.rise,Ls=segLen(s,rr),bl=Ls/nb,n=Math.floor((bl-1.2)/CFG.seatPitch),u0=(b*bl+(bl-n*CFG.seatPitch)/2+CFG.seatPitch/2)/Ls;
+    for(let j=0;j<n;j++){const p=pt(s,u0+j*CFG.seatPitch/Ls,rr);sx.push(p[0]);sy.push(h);sz.push(p[1]);sya.push(Math.atan2(p[2],p[3]));sbk.push(blocks.length);srow.push(r+1);snum.push(j+1)}}
+   B.end=sx.length;const m=(B.start+B.end)>>1;B.c=V(0,0,0);for(let i=B.start;i<B.end;i++)B.c.x+=sx[i],B.c.y+=sy[i],B.c.z+=sz[i];B.c.multiplyScalar(1/(B.end-B.start));
+   B.n=V(Math.sin(sya[m]),0,Math.cos(sya[m]));const ang=(Math.atan2(B.c.z,B.c.x)+2*Math.PI)%(2*Math.PI);B.gate=1+Math.floor(ang/(2*Math.PI)*CFG.gates);
+   S.blocks.push(blocks.length);blocks.push(B)}});
+ S.end=sx.length;stands[k]=S});
+const N=sx.length,AV=0,SOLD=1,RES=2,HELD=3,status=new Uint8Array(N),vip=new Uint8Array(N);
+blocks.forEach(B=>{const isV=B.stand===CFG.vip.stand&&TI[B.tier].key===CFG.vip.tier&&CFG.vip.blocks.includes(B.n);const f=rnd()<.07?2:.05+rnd()*.5;
+ for(let i=B.start;i<B.end;i++){if(isV&&srow[i]>=CFG.vip.fromRow)vip[i]=1;const q=rnd();status[i]=q<f*(1.25-.5*srow[i]/B.rows)?SOLD:q>.975?RES:AV}});
+const priceOf=i=>vip[i]?CFG.vip.price:blocks[sbk[i]].price;
+const seatId=i=>`JLN-${blocks[sbk[i]].id.replace('-','')}-R${String(srow[i]).padStart(2,'0')}-S${String(snum[i]).padStart(3,'0')}`;
+function recount(){blocks.forEach(B=>{let a=0;for(let i=B.start;i<B.end;i++)if(status[i]===AV)a++;B.avail=a});STANDS.forEach(k=>{const S=stands[k];S.avail=S.blocks.reduce((t,b)=>t+blocks[b].avail,0);S.total=S.end-S.start})}
+recount();$('#cnt').textContent=fmt(N);
+
+const MAT=new Float32Array(N*16),COL=new Float32Array(N*3);
+{const o=new THREE.Object3D();for(let i=0;i<N;i++){o.position.set(sx[i],sy[i],sz[i]);o.rotation.set(0,sya[i],0);o.updateMatrix();o.matrix.toArray(MAT,i*16)}}
+const seatHi=merge([box(.46,.08,.42,0,.42,0),box(.46,.5,.07,0,.69,.2)]),seatLo=box(.48,.62,.44,0,.4,.05),pickG=box(.56,.95,.82,0,.45,.07);
+const seatMat=new THREE.MeshStandardMaterial({roughness:.4,metalness:.05});
+STANDS.forEach(k=>{const S=stands[k],a=S.start,b=S.end,cnt=b-a,c=V(0,0,0);for(let i=a;i<b;i++)c.x+=sx[i],c.y+=sy[i],c.z+=sz[i];c.multiplyScalar(1/cnt);let rad=0;for(let i=a;i<b;i++)rad=Math.max(rad,Math.hypot(sx[i]-c.x,sy[i]-c.y,sz[i]-c.z));
+ S.sphere=new THREE.Sphere(c,rad+2);S.im=new THREE.InstancedBufferAttribute(MAT.subarray(a*16,b*16),16);S.ic=new THREE.InstancedBufferAttribute(COL.subarray(a*3,b*3),3);
+ const mk=(g,mat)=>{const gg=g.clone();gg.boundingSphere=S.sphere;const m=new THREE.InstancedMesh(gg,mat,cnt);m.instanceMatrix=S.im;return m};
+ S.hi=mk(seatHi,seatMat);S.lo=mk(seatLo,seatMat);[S.hi,S.lo].forEach(m=>{m.instanceColor=S.ic;m.receiveShadow=true;scene.add(m)});
+ const pc=new Float32Array(cnt*3);for(let i=0;i<cnt;i++){const id=a+i+1;pc[i*3]=(id&255)/255;pc[i*3+1]=(id>>8&255)/255;pc[i*3+2]=(id>>16&255)/255}
+ S.pk=mk(pickG,new THREE.MeshBasicMaterial({toneMapped:false}));S.pk.instanceColor=new THREE.InstancedBufferAttribute(pc,3);pickScene.add(S.pk)});
+const rt=new THREE.WebGLRenderTarget(1,1),px=new Uint8Array(4);
+function pickAt(x,y){const rp=roof.userData.pk,rIn=rp.parent===pickScene;if(level==='stadium'&&rIn)pickScene.remove(rp);camera.setViewOffset(innerWidth,innerHeight,x|0,y|0,1,1);renderer.setRenderTarget(rt);renderer.render(pickScene,camera);renderer.setRenderTarget(null);camera.clearViewOffset();renderer.readRenderTargetPixels(rt,0,0,1,1,px);if(level==='stadium'&&rIn)pickScene.add(rp);const id=px[0]|px[1]<<8|px[2]<<16;return id&&id<=N?id-1:-1}
+/* selected-seat beacon */
+const beacon=new THREE.Group();{const mm=new THREE.MeshBasicMaterial({color:C(0xff5a00),toneMapped:false,transparent:true,opacity:.85});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,7,8),mm);pole.position.y=4.6;const ring=new THREE.Mesh(new THREE.TorusGeometry(.62,.07,8,24),mm);ring.rotation.x=Math.PI/2;ring.position.y=.5;
+ const out=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.62,1.02,.62)),new THREE.LineBasicMaterial({color:C(0xff5a00)}));out.position.y=.55;beacon.add(pole,ring,out);beacon.visible=false;scene.add(beacon)}
+
+/* ---------- colours ---------- */
+const BASE1=C(0x2b5fb4),BASE2=C(0x24529f),FOC=C(0x4d88e6),HOV=C(0xff8a1f),SEL=C(0xff5a00),GREY=C(0x9ea2a9),YEL=C(0xf2c230),GOLD=C(0xc9a227);
+let level='stadium',focusStand=null,focusBlock=-1,hlStand=null,hlBlock=-1,hovSeat=-1,sel=-1,cur=null,hold=null;const mine=new Set();
+function colorOf(i){const b=sbk[i],st=status[i];if(i===sel)return SEL;if(st===SOLD)return GREY;if(st===RES||st===HELD)return YEL;if(i===hovSeat||b===hlBlock||blocks[b].stand===hlStand)return HOV;if(vip[i])return GOLD;if(b===focusBlock)return FOC;return b%2?BASE2:BASE1}
+function paintRange(a,b){for(let i=a;i<b;i++){const c=colorOf(i);COL[i*3]=c.r;COL[i*3+1]=c.g;COL[i*3+2]=c.b}STANDS.forEach(k=>{const S=stands[k];if(S.start<b&&S.end>a)S.ic.needsUpdate=true})}
+const rB=b=>{if(b>=0)paintRange(blocks[b].start,blocks[b].end)},rS=k=>{if(k)paintRange(stands[k].start,stands[k].end)},rI=i=>{if(i>=0)paintRange(i,i+1)};
+paintRange(0,N);
+
+/* ---------- camera: orbit poses, tweens, flights, free-look views ---------- */
+const orb={th:.5,ph:.02,r:640,tgt:V(0,0,0)},look=V(0,0,0),sv={yaw:0,pitch:0,eye:V(),dir:V(0,0,-1),mode:null};
+let state='intro',tw=null,fl=null,saved=null,snapNext=null;
+const orbPos=(o=orb)=>{const s=Math.sin(o.ph);return V(o.tgt.x+o.r*s*Math.sin(o.th),o.tgt.y+o.r*Math.cos(o.ph),o.tgt.z+o.r*s*Math.cos(o.th))};
+function applyOrbit(){camera.position.copy(orbPos());look.copy(orb.tgt);camera.lookAt(look)}
+const wrapA=(a,b)=>{let d=b-a;d=((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;return a+d};
+function tweenOrb(to,dur,done){tw={t0:performance.now(),dur:RM?1:dur,f:{th:orb.th,ph:orb.ph,r:orb.r,tgt:orb.tgt.clone()},to:{th:wrapA(orb.th,to.th),ph:to.ph,r:to.r,tgt:to.tgt.clone()},done}}
+function stepTw(now){const t=clamp((now-tw.t0)/tw.dur,0,1),e=ease(t);['th','ph','r'].forEach(k=>orb[k]=lerp(tw.f[k],tw.to[k],e));orb.tgt.lerpVectors(tw.f.tgt,tw.to.tgt,e);if(t>=1){const d=tw.done;tw=null;if(d)d()}}
+function fly(p3,l1,f1,c1,c2,dur,done){fl={t0:performance.now(),dur:RM?400:dur,p0:camera.position.clone(),c1,c2,p3,l0:look.clone(),l1,f0:camera.fov,f1,done};tw=null;state='fly';ui()}
+function stepFly(now){const f=fl,t=clamp((now-f.t0)/f.dur,0,1),e=ease(t),u=1-e;
+ camera.position.set(0,0,0).addScaledVector(f.p0,u*u*u).addScaledVector(f.c1,3*u*u*e).addScaledVector(f.c2,3*u*e*e).addScaledVector(f.p3,e*e*e);
+ look.lerpVectors(f.l0,f.l1,e);camera.fov=lerp(f.f0,f.f1,e);camera.updateProjectionMatrix();camera.lookAt(look);if(t>=1){fl=null;f.done()}}
+function applyView(){const d=sv.dir.clone().applyAxisAngle(Y,sv.yaw),r=V(0,0,0).crossVectors(d,Y).normalize();d.applyAxisAngle(r,sv.pitch);camera.position.copy(sv.eye);look.copy(sv.eye).addScaledVector(d,40);camera.lookAt(look)}
+const pose=(th,ph,r,tgt)=>({th,ph,r,tgt});
+function goPose(p,dur=1500){if(state==='view'||state==='fly'){const p3=orbPos(p);fly(p3,p.tgt.clone(),45,camera.position.clone().add(V(0,30,0)),p3.clone().add(V(0,40,0)),2400,()=>{Object.assign(orb,{th:p.th,ph:p.ph,r:p.r,tgt:p.tgt.clone()});state='orbit';ui()})}
+ else{state='orbit';tweenOrb(p,dur);ui()}}
+function goView(eye,lk,fov,mode,done){if(state==='orbit'||state==='intro')saved={pose:{th:orb.th,ph:orb.ph,r:orb.r,tgt:orb.tgt.clone()},level,focusStand,focusBlock};
+ const dir=lk.clone().sub(eye).normalize();setHover(null);
+ fly(eye,lk,fov,camera.position.clone().lerp(V(eye.x*.4,Math.max(eye.y,30)+60,eye.z*.4),.5),eye.clone().addScaledVector(dir,-22).add(V(0,12,0)),2800,()=>{state='view';sv.mode=mode;sv.yaw=sv.pitch=0;sv.eye.copy(eye);sv.dir.copy(dir);ui();renderPanel();if(done)done()})}
+function backFromView(){if(!saved){goStadium();return}const s=saved;saved=null;level=s.level;focusStand=s.focusStand;const ob=focusBlock;focusBlock=s.focusBlock;rB(ob);rB(focusBlock);goPose(s.pose);renderPanel()}
+const POSE={aerial:()=>pose(orb.th,.02,560,V(0,0,0)),drone:()=>pose(.72,.98,320,V(0,4,0))};
+function seatEye(i){const n=V(Math.sin(sya[i]),0,Math.cos(sya[i]));return{eye:V(sx[i],sy[i]+1.22,sz[i]).addScaledVector(n,.05),lk:V(sx[i]*.15,0,sz[i]*.15)}}
+const VIEWS={interior:()=>({eye:V(0,38.5,92),lk:V(0,0,-15),fov:74}),pitch:()=>({eye:V(0,1.7,14),lk:V(0,9,-120),fov:70}),track:()=>({eye:V(-48,1.15,-42),lk:V(60,2.5,-42),fov:62}),
+ vip:()=>({eye:V(0,H0+1.65,R0+TI[0].d0+TI[0].rows*TI[0].dep+1.3),lk:V(0,0,0),fov:64})};
+
+/* ---------- levels: stadium → stand → block → seat ---------- */
+function goStadium(){const ob=focusBlock;level='stadium';focusStand=null;focusBlock=-1;rB(ob);goPose(POSE.drone());renderPanel()}
+function goStand(k){const ob=focusBlock;level='stand';focusStand=k;focusBlock=-1;rB(ob);const S=stands[k],c=S.sphere.center,n=blocks[S.blocks[S.blocks.length>>2]].n,mid=S.s%2?V(Math.sign(c.x),0,0):V(0,0,Math.sign(c.z));
+ goPose(pose(Math.atan2(-mid.x,-mid.z),1.0,S.s%2?230:250,V(c.x*.55,10,c.z*.55)));renderPanel()}
+function goBlock(b){const ob=focusBlock,B=blocks[b];level='block';focusStand=B.stand;focusBlock=b;rB(ob);rB(b);const v=B.n.clone().multiplyScalar(-55).add(V(0,24,0));
+ goPose(pose(Math.atan2(v.x,v.z),Math.acos(v.y/v.length()),v.length(),B.c.clone()),1400);renderPanel()}
+function chooseSeat(i){if(status[i]===SOLD&&!mine.has(i)){toast('That seat is sold. Pick a blue or gold one.');return}if(status[i]===RES||(status[i]===HELD&&!(hold&&hold.i===i))){toast('That seat is reserved.');return}
+ const o=sel;sel=i;rI(o);rI(i);beacon.position.set(sx[i],sy[i],sz[i]);beacon.visible=true;$('[data-cam=seat]').disabled=false;
+ if(level!=='block'){level='block';focusStand=blocks[sbk[i]].stand;const ob=focusBlock;focusBlock=sbk[i];rB(ob);rB(focusBlock)}
+ const{eye,lk}=seatEye(i);if(state==='orbit'||state==='intro')saved=null;goView(eye,lk,62,'seat')}
+
+/* ---------- panel ---------- */
+const panel=$('#panel');
+function metrics(i){const x=sx[i],z=sz[i],eh=sy[i]+1.2,hd=Math.hypot(x,z);return{dc:Math.hypot(hd,eh),tl:Math.hypot(Math.max(Math.abs(x)-52.5,0),Math.max(Math.abs(z)-34,0)),down:Math.atan2(eh,hd)*57.3,off:Math.atan2(Math.abs(x),Math.abs(z))*57.3}}
+const stName=i=>mine.has(i)?['Yours','stm']:hold&&hold.i===i?['Held for you','st2']:status[i]===SOLD?['Sold','st1']:status[i]===RES?['Reserved','st2']:vip[i]?['VIP · available','stv']:['Available','st0'];
+const priceRange=bs=>{const p=bs.map(b=>blocks[b].price);return`${inr(Math.min(...p))}–${inr(Math.max(...p))}`};
+function seatHTML(i,full){const B=blocks[sbk[i]],m=metrics(i),[sl,sc]=stName(i);
+ return`<div class="kick">${esc(CFG.stands[B.stand])} (provisional) · ${TI[B.tier].name}</div><h2>Block ${B.id} · Row ${srow[i]} · Seat ${snum[i]}</h2><span class="st ${sc}">${sl}</span>
+ <dl><dt>Ticket price</dt><dd><b>${inr(priceOf(i))}</b>${vip[i]?' · VIP package':''}</dd><dt>Gate</dt><dd>Gate ${B.gate} (provisional)</dd>
+ <dt>To centre spot</dt><dd>${fmt(m.dc)} m</dd><dt>To nearest touchline</dt><dd>${fmt(m.tl)} m</dd><dt>Looking down to centre</dt><dd>${m.down.toFixed(0)}°</dd><dt>Off the halfway line</dt><dd>${m.off.toFixed(0)}°</dd>
+ ${full?`<dt>Seat ID</dt><dd><code>${seatId(i)}</code></dd><dt>Coordinates</dt><dd>x ${sx[i].toFixed(1)}, y ${sy[i].toFixed(1)}, z ${sz[i].toFixed(1)} m</dd>`:''}</dl>`}
+function renderPanel(){let h='';
+ if(state==='view'&&sv.mode==='seat'&&sel>=0){const i=sel;h=seatHTML(i,true);
+  if(mine.has(i))h+=`<p>Booked. Your ticket is ready.</p><div class="acts"><button class="btn pri" data-a="ticket">Show ticket</button><button class="btn" data-a="back">Back to the model</button></div>`;
+  else if(hold&&hold.i===i)h+=`<p>This seat is held for you. Nobody else can book it until the timer runs out.</p><div class="timer" id="timer"></div><div class="acts"><button class="btn pri" data-a="confirm">Confirm booking · ${inr(priceOf(i))}</button><button class="btn" data-a="release">Release</button></div><p>Demo checkout: no payment is taken.</p>`;
+  else h+=`<div class="acts"><button class="btn pri" data-a="hold">Hold this seat · ${CFG.holdSeconds/60} min</button><button class="btn" data-a="back">Back to block</button></div>`;
+  if(!vip[i]&&!mine.has(i))h+=`<div class="acts"><button class="btn gold" data-a="vip">Upgrade: ${esc(CFG.vip.perks.split(',')[0])} · from ${inr(CFG.vip.price)}</button></div>`;
+  if(vip[i])h+=`<p>VIP enclosure package (provisional): ${esc(CFG.vip.perks)}.</p>`}
+ else if(state==='view'){const t={interior:'Interior wide view',pitch:'Pitch-level view',track:'Track-level view, lane 5',vip:'VIP enclosure view'}[sv.mode]||'View';
+  h=`<div class="kick">Camera</div><h2>${t}</h2><p>Drag to look around, scroll to zoom. Positions are approximate.</p>${sv.mode==='vip'?`<p>VIP enclosure (provisional): ${esc(CFG.vip.perks)}. Seats from ${inr(CFG.vip.price)}.</p><div class="acts"><button class="btn gold" data-a="vip">Pick the best VIP seat</button></div>`:''}<div class="acts"><button class="btn" data-a="back">Back to the model</button></div>`}
+ else{const c=cur;
+  if(c&&c.type==='seat')h=seatHTML(c.key,false)+'<p>Click to select this seat and see its view.</p>';
+  else if(c&&c.type==='block'||(!c&&level==='block')){const B=blocks[c?c.key:focusBlock];h=`<div class="kick">${esc(CFG.stands[B.stand])} (provisional) · ${TI[B.tier].name}</div><h2>Block ${B.id}</h2><dl><dt>Rows</dt><dd>${B.rows}</dd><dt>Seats</dt><dd>${fmt(B.end-B.start)}</dd><dt>Available</dt><dd>${fmt(B.avail)}</dd><dt>Price</dt><dd>${inr(B.price)}</dd><dt>Gate</dt><dd>Gate ${B.gate}</dd></dl><p>${c?'Click to zoom into this block.':'Hover a seat to see its price and sightline, click to select it.'}</p>${c?'':'<div class="acts"><button class="btn" data-a="copyblock">Copy block data (JSON)</button></div>'}`}
+  else if(c&&c.type==='stand'||(!c&&level==='stand')){const S=stands[c?c.key:focusStand];h=`<div class="kick">Stand (provisional name)</div><h2>${esc(S.name)}</h2><dl><dt>Tiers</dt><dd>${TI.length}</dd><dt>Blocks</dt><dd>${S.blocks.length}</dd><dt>Seats</dt><dd>${fmt(S.total)}</dd><dt>Available</dt><dd>${fmt(S.avail)}</dd><dt>Prices</dt><dd>${priceRange(S.blocks)}</dd></dl><p>${c?'Click to zoom into this stand.':'Hover a block to highlight it, click to zoom in.'}</p>`}
+  else{h=`<div class="kick">Explore in 3D</div><h2>Choose a stand</h2><p>Hover the bowl to highlight a stand, then click to drill into blocks and seats. Drag to orbit, right-drag to pan, scroll to zoom.</p><div class="rows">${STANDS.map(k=>{const S=stands[k];return`<button class="row" data-stand="${k}"><span><b>${esc(S.name)}</b><small>${fmt(S.avail)} of ${fmt(S.total)} available</small></span><span>${priceRange(S.blocks)}</span></button>`}).join('')}</div>
+   <p>Model notes: 9-lane track, football pitch and a folded PTFE membrane roof on a cable net with ridge and valley cables. Bowl tiers, block numbering and stand names are placeholders until official seating plans are supplied.</p>`}}
+ panel.innerHTML=h;tickTimer();renderCrumbs()}
+function renderCrumbs(){const c=[['Stadium','stadium',level==='stadium'&&state!=='view']];if(focusStand)c.push([stands[focusStand].name,'stand',level==='stand']);if(focusBlock>=0)c.push(['Block '+blocks[focusBlock].id,'block',level==='block'&&state!=='view']);if(state==='view'&&sv.mode==='seat'&&sel>=0)c.push([`Row ${srow[sel]} · Seat ${snum[sel]}`,'seat',true]);
+ $('#crumbs').innerHTML=c.map((x,i)=>`${i?'<i>›</i>':''}<button data-crumb="${x[1]}"${x[2]?' aria-current="true"':''}>${esc(x[0])}</button>`).join('')}
+$('#crumbs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.crumb;if(k==='stadium')goStadium();else if(k==='stand')goStand(focusStand);else if(k==='block')goBlock(focusBlock)});
+panel.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.stand){goStand(b.dataset.stand);return}const a=b.dataset.a,i=sel;
+ if(a==='back')backFromView();
+ else if(a==='hold'){if(status[i]!==AV){toast('Someone else has this seat now.');return}if(hold)release(true);status[i]=HELD;hold={i,until:Date.now()+CFG.holdSeconds*1000};recount();rI(i);renderPanel()}
+ else if(a==='release'){release();renderPanel()}
+ else if(a==='confirm'){if(!hold||hold.i!==i||Date.now()>hold.until){toast('Your hold expired.');return}status[i]=SOLD;mine.add(i);hold=null;recount();rI(i);renderPanel();showTicket(i)}
+ else if(a==='ticket')showTicket(i);
+ else if(a==='vip'){let best=-1,bd=1e9;for(let j=0;j<N;j++)if(vip[j]&&status[j]===AV){const d=Math.abs(sx[j])+srow[j]*.3;if(d<bd){bd=d;best=j}}if(best<0){toast('VIP enclosure is sold out.');return}saved=saved||null;chooseSeat(best)}
+ else if(a==='copyblock'){const B=blocks[focusBlock],rows=[];for(let j=B.start;j<B.end;j++)rows.push(rec(j));copy(JSON.stringify(rows,null,1),`Copied ${rows.length} seat records`)}});
+function release(quiet){if(!hold)return;const i=hold.i;if(status[i]===HELD)status[i]=AV;hold=null;recount();rI(i);if(!quiet)toast('Seat released.')}
+function tickTimer(){const t=$('#timer');if(!t||!hold)return;const s=Math.max(0,Math.ceil((hold.until-Date.now())/1000));t.textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+setInterval(()=>{if(hold&&Date.now()>hold.until){release(true);toast('Your 10-minute hold expired. The seat is back on sale.');renderPanel()}tickTimer()},1000);
+function copy(t,msg){try{navigator.clipboard.writeText(t).then(()=>toast(msg),()=>toast('Copy was blocked by the browser.'))}catch(e){toast('Copy was blocked by the browser.')}}
+const rec=i=>{const B=blocks[sbk[i]];return{id:seatId(i),stand:B.stand,standName:CFG.stands[B.stand]+' (provisional)',tier:TI[B.tier].key,block:B.id,row:srow[i],seat:snum[i],x:+sx[i].toFixed(2),y:+sy[i].toFixed(2),z:+sz[i].toFixed(2),status:['available','sold','reserved','held'][status[i]],vip:!!vip[i],price:priceOf(i),gate:B.gate}};
+window.jlnSeatDatabase=()=>Array.from({length:N},(_,i)=>rec(i));
+
+/* ---------- ticket ---------- */
+function drawSnap(){const s=$('#snap'),g=s.getContext('2d'),src=renderer.domElement,W=src.width,H=src.height,ar=s.width/s.height;let w=W,h=W/ar;if(h>H){h=H;w=H*ar}g.drawImage(src,(W-w)/2,(H-h)/2,w,h,0,0,s.width,s.height)}
+function showTicket(i){const B=blocks[sbk[i]],ref='JLN-DEMO-'+(i*2654435761>>>0).toString(36).toUpperCase().slice(0,6);let qr='';
+ try{const q=qrcode(0,'M');q.addData(JSON.stringify({ref,seat:seatId(i),event:CFG.event.name,when:CFG.event.when,price:priceOf(i)}));q.make();qr=q.createSvgTag({cellSize:3,margin:2,scalable:true})}catch(e){qr='<code>'+ref+'</code>'}
+ $('#tktIn').innerHTML=`<small>Demo ticket · ${esc(CFG.event.when)}</small><h3>${esc(CFG.event.name)}</h3><small>Jawaharlal Nehru Stadium, New Delhi · ${esc(CFG.stands[B.stand])} · ${TI[B.tier].name}</small>
+ <div class="cells"><div><small>Block</small><b>${B.id}</b></div><div><small>Row</small><b>${srow[i]}</b></div><div><small>Seat</small><b>${snum[i]}</b></div><div><small>Gate</small><b>${B.gate}</b></div></div>
+ <div class="qrw"><div class="qr">${qr}</div><div><small>Booking ref</small><div><b>${ref}</b></div><div class="pr">${inr(priceOf(i))}</div><small>Not a real ticket</small></div></div>
+ <div class="acts"><button class="btn pri" id="tkCopy">Copy ticket details</button><button class="btn" id="tkClose">Close</button></div>`;
+ if(state==='view'&&sv.mode==='seat'){renderer.render(scene,camera);drawSnap()}
+ $('#modal').classList.add('on');$('#tkClose').focus();
+ $('#tkClose').onclick=()=>$('#modal').classList.remove('on');$('#tkCopy').onclick=()=>copy(`${CFG.event.name}, ${CFG.event.when}\nJLN Stadium, ${CFG.stands[B.stand]}, Block ${B.id}, Row ${srow[i]}, Seat ${snum[i]}, Gate ${B.gate}\n${inr(priceOf(i))} · ${ref} (demo)`,'Ticket details copied')}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('on')});
+
+/* ---------- hover + tooltip ---------- */
+const tip=$('#tip');
+function hoverInfo(i){if(i<0)return null;const b=sbk[i],k=blocks[b].stand;if(level==='stadium')return{type:'stand',key:k};
+ if(level==='stand')return k===focusStand?{type:'block',key:b}:{type:'stand',key:k};
+ if(b===focusBlock)return{type:'seat',key:i};return k===focusStand?{type:'block',key:b}:{type:'stand',key:k}}
+function setHover(h,mx,my){const same=(h&&cur&&h.type===cur.type&&h.key===cur.key)||(!h&&!cur);
+ if(!same){const ps=hlStand,pb=hlBlock,pi=hovSeat;hlStand=h&&h.type==='stand'?h.key:null;hlBlock=h&&h.type==='block'?h.key:-1;hovSeat=h&&h.type==='seat'?h.key:-1;
+  if(ps!==hlStand){rS(ps);rS(hlStand)}if(pb!==hlBlock){rB(pb);rB(hlBlock)}if(pi!==hovSeat){rI(pi);rI(hovSeat)}cur=h;renderPanel()}
+ if(!h){tip.classList.remove('on');canvas.style.cursor='grab';return}
+ canvas.style.cursor='pointer';
+ tip.innerHTML=h.type==='stand'?`<b>${esc(stands[h.key].name)}</b> <span>· ${fmt(stands[h.key].avail)} available</span>`:h.type==='block'?`<b>Block ${blocks[h.key].id}</b> <span>· ${inr(blocks[h.key].price)} · ${fmt(blocks[h.key].avail)} left</span>`:`<b>Row ${srow[h.key]} · Seat ${snum[h.key]}</b> <span>· ${stName(h.key)[0]} · ${inr(priceOf(h.key))}</span>`;
+ tip.classList.add('on');tip.style.transform=`translate(${clamp(mx+16,8,innerWidth-tip.offsetWidth-8)}px,${clamp(my+16,8,innerHeight-tip.offsetHeight-8)}px)`}
+
+/* ---------- UI chrome ---------- */
+function ui(){document.body.dataset.state=state;document.querySelectorAll('#cams button').forEach(b=>b.setAttribute('aria-pressed',state==='view'&&sv.mode===b.dataset.cam?'true':'false'));if(state!=='orbit'&&cur)setHover(null)}
+$('#cams').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const k=b.dataset.cam;
+ if(k==='aerial'||k==='drone'){level='stadium';focusStand=null;const ob=focusBlock;focusBlock=-1;rB(ob);saved=null;goPose(POSE[k](),1800);renderPanel()}
+ else if(k==='seat'){if(sel>=0){const{eye,lk}=seatEye(sel);goView(eye,lk,62,'seat')}}
+ else{const v=VIEWS[k]();goView(v.eye,v.lk,v.fov,k)}});
+let roofMode=0;$('#roofBtn').addEventListener('click',()=>{roofMode=(roofMode+1)%3;const b=$('#roofBtn');
+ roof.visible=cables.visible=roofMode!==2;memM.opacity=roofMode?.22:.96;memM.depthWrite=!roofMode;roof.castShadow=roofMode===0;
+ if(roofMode)pickScene.remove(roof.userData.pk);else pickScene.add(roof.userData.pk);b.textContent='Roof: '+['solid','x-ray','hidden'][roofMode]});
+addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#modal').classList.contains('on'))$('#modal').classList.remove('on');else if(state==='view')backFromView();else if(level==='block')goStand(focusStand);else if(level==='stand')goStadium()}});
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2800)}
+
+/* ---------- input ---------- */
+const ptrs=new Map(),mouse={x:0,y:0,dirty:false};let drag=null,pinch0=0;
+const dist=()=>{const[a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)};
+function endIntro(){if(state==='intro'){tw=null;state='orbit';ui()}}
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(ptrs.size===1)drag={moved:0,pan:e.button===2||e.shiftKey};else{drag=null;pinch0=dist()}endIntro()});
+canvas.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;const p=ptrs.get(e.pointerId);
+ if(!p){if(e.pointerType==='mouse')mouse.dirty=true;return}
+ const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+ if(ptrs.size===2){const d=dist();if(pinch0&&d){if(state==='orbit')orb.r=clamp(orb.r*pinch0/d,35,800);else if(state==='view'){camera.fov=clamp(camera.fov*pinch0/d,28,88);camera.updateProjectionMatrix()}}pinch0=d;return}
+ if(!drag)return;drag.moved+=Math.abs(dx)+Math.abs(dy);if(drag.moved<5)return;
+ if(state==='orbit'){if(cur)setHover(null);tw=null;canvas.style.cursor='grabbing';
+  if(drag.pan){const k=orb.r*.0016,f=V(Math.sin(orb.th),0,Math.cos(orb.th)),r=V(f.z,0,-f.x);orb.tgt.addScaledVector(r,-dx*k).addScaledVector(f,-dy*k);orb.tgt.x=clamp(orb.tgt.x,-220,220);orb.tgt.z=clamp(orb.tgt.z,-200,200)}
+  else{orb.th-=dx*.005;orb.ph=clamp(orb.ph-dy*.005,.02,1.5)}}
+ else if(state==='view'){sv.yaw=clamp(sv.yaw+dx*.004,-2.6,2.6);sv.pitch=clamp(sv.pitch+dy*.004,-.7,.9)}});
+function up(e){if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=0;
+ if(drag&&drag.moved<7&&e.type==='pointerup'&&state==='orbit'){const h=hoverInfo(pickAt(e.clientX,e.clientY));if(h){if(h.type==='stand')goStand(h.key);else if(h.type==='block')goBlock(h.key);else chooseSeat(h.key)}}
+ drag=null;mouse.dirty=e.pointerType==='mouse';if(state==='orbit')canvas.style.cursor='grab'}
+canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!ptrs.size){mouse.dirty=false;if(cur)setHover(null)}});
+canvas.addEventListener('wheel',e=>{e.preventDefault();endIntro();if(state==='orbit'){orb.r=clamp(orb.r*Math.exp(e.deltaY*.0012),35,800);tw=null}else if(state==='view'){camera.fov=clamp(camera.fov*Math.exp(e.deltaY*.001),28,88);camera.updateProjectionMatrix()}},{passive:false});
+
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+const P0=POSE.drone();tweenOrb(innerWidth<820?pose(P0.th,.9,470,P0.tgt):P0,RM?1:5200,()=>{state='orbit';ui()});
+renderPanel();ui();
+function loop(now){requestAnimationFrame(loop);
+ if(fl)stepFly(now);else if(state==='view')applyView();else{if(tw)stepTw(now);applyOrbit()}
+ STANDS.forEach(k=>{const S=stands[k],near=camera.position.distanceTo(S.sphere.center)-S.sphere.radius*.6<170;S.hi.visible=near;S.lo.visible=!near});
+ if(beacon.visible){const s=1+.15*Math.sin(now*.006);beacon.scale.set(s,1,s)}
+ if(state==='orbit'&&mouse.dirty&&!ptrs.size){mouse.dirty=false;setHover(hoverInfo(pickAt(mouse.x,mouse.y)),mouse.x,mouse.y)}
+ renderer.render(scene,camera)}
+requestAnimationFrame(loop);$('#load').classList.add('off');
+}
+requestAnimationFrame(()=>setTimeout(()=>{try{main()}catch(err){$('#load').textContent='This needs WebGL, which your browser could not start.';console.error(err)}},30));
+}
+</script>
+</body>
+</html>
